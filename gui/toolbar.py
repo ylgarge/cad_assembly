@@ -8,8 +8,8 @@ from typing import Dict, Any, List, Optional
 from PyQt5.QtWidgets import (
     QToolBar, QAction, QToolButton, QMenu, QActionGroup,
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QComboBox,
-    QSlider, QSpinBox, QCheckBox, QPushButton, QSeparator,
-    QButtonGroup, QFrame
+    QSlider, QSpinBox, QCheckBox, QPushButton, 
+    QButtonGroup, QFrame  # QSeparator kaldırıldı, QFrame kullanılıyor
 )
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt5.QtGui import QIcon, QPixmap, QKeySequence
@@ -516,4 +516,4 @@ class StatusToolbar(QToolBar):
     def update_fps(self, fps: int):
         """FPS bilgisini güncelle"""
         self.fps_label.setText(f"FPS: {fps}")
-
+        

@@ -1,5 +1,5 @@
 """
-Dialog Pencereleri
+Dialog Pencereleri - Import hataları düzeltildi
 Ayarlar, hakkında, dosya bilgileri vb. dialog pencereleri
 """
 
@@ -12,9 +12,10 @@ from PyQt5.QtWidgets import (
     QGroupBox, QCheckBox, QSpinBox, QDoubleSpinBox, QComboBox,
     QSlider, QDialogButtonBox, QFileDialog, QMessageBox,
     QTreeWidget, QTreeWidgetItem, QSplitter, QFrame,
-    QScrollArea, QWidget, QProgressDialog, QListWidget
+    QScrollArea, QWidget, QProgressDialog, QListWidget,
+    QProgressBar  # ✅ DOĞRU: QtWidgets'tan import
 )
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread, QTimer,QProgressBar
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread, QTimer  # ❌ QProgressBar burada DEĞİL
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 
 from utils import Config, APP_NAME, APP_VERSION, GUIDefaults
@@ -485,7 +486,7 @@ class AboutDialog(QDialog):
 <ul>
 <li>Python 3.x</li>
 <li>PyQt5</li>
-<li>PythonOCC Core 7.9.0</li>
+<li>PythonOCC Core 7.7.2</li>
 <li>OpenCASCADE</li>
 </ul>
         """)
@@ -717,7 +718,7 @@ class ProgressDialog(QDialog):
         self.message_label = QLabel(message)
         layout.addWidget(self.message_label)
         
-        # Progress bar
+        # Progress bar - QtWidgets'tan import edildi
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)  # Indeterminate
         layout.addWidget(self.progress_bar)
