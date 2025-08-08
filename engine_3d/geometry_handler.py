@@ -24,7 +24,7 @@ try:
 
     # Geometrik analizler
     from OCC.Core.BRep import BRep_Tool
-    from OCC.Core.BRepGProp import brepgprop, BRepGProp_Face, BRepGProp_Edge
+    from OCC.Core.BRepGProp import brepgprop, BRepGProp_Face
     from OCC.Core.GProp import GProp_GProps
 
     # Yüzey analizleri
@@ -51,10 +51,10 @@ try:
     from OCC.Core.TopAbs import (
         TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX, TopAbs_SOLID, TopAbs_WIRE
     )
-
+    
     # Extend utilities
     from OCC.Extend.TopologyUtils import TopologyExplorer
-    from OCC.Extend.ShapeFactory import make_box, make_cylinder, make_sphere
+
 
 except ImportError as e:
     logging.error(f"PythonOCC geometri import hatası: {e}")

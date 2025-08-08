@@ -18,7 +18,7 @@ try:
 
     # Dönüşüm tipleri
     from OCC.Core.gp import (
-        gp_Translation, gp_Rotation, gp_Mirror, gp_Scale
+        gp_Translation, gp_Rotation, gp_Scale
     )
 
     # Shape dönüşümleri
