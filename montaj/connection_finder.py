@@ -9,16 +9,33 @@ from typing import Dict, Any, List, Tuple, Optional
 from enum import Enum
 
 try:
-    from OCC.Core import (
-        TopoDS_Shape, TopoDS_Face, TopoDS_Edge, TopoDS_Vertex,
-        BRepAdaptor_Surface, BRepAdaptor_Curve,
+    # Topology classes
+    from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Face, TopoDS_Edge, TopoDS_Vertex
+
+    # Surface & curve adaptors
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
+
+    # Geometry type enums
+    from OCC.Core.GeomAbs import (
         GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Sphere, GeomAbs_Cone,
-        GeomAbs_Line, GeomAbs_Circle,
-        BRep_Tool, GProp_GProps, BRepGProp,
-        gp_Pnt, gp_Dir, gp_Vec, Precision
+        GeomAbs_Line, GeomAbs_Circle
     )
+
+    # Shape tools & properties
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop_VolumeProperties, brepgprop_SurfaceProperties
+
+    # Geometry primitives
+    from OCC.Core.gp import gp_Pnt, gp_Dir, gp_Vec
+
+    # Precision
+    from OCC.Core.Precision import precision
+
+    # Topology utilities
     from OCC.Extend.TopologyUtils import TopologyExplorer
-    
+
+  
 except ImportError as e:
     logging.error(f"PythonOCC connection finder import hatası: {e}")
     raise

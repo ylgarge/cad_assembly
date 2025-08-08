@@ -28,7 +28,7 @@ try:
     from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_WHITE, Quantity_NOC_GRAY
 
     # 3D Görselleştirme bileşenleri
-    from OCC.Core.AIS import AIS_InteractiveContext, AIS_Shape, AIS_DisplayMode_Shaded
+    from OCC.Core.AIS import AIS_InteractiveContext, AIS_Shape, AIS_DisplayMode
     from OCC.Core.V3d import V3d_View, V3d_Viewer
     from OCC.Core.Aspect import Aspect_GradientFillMethod_Horizontal
 
@@ -81,7 +81,7 @@ class CADViewer(QWidget):
         
         # Settings
         if OCC_AVAILABLE:
-            self.display_mode = AIS_DisplayMode_Shaded
+            self.display_mode = AIS_DisplayMode.AIS_Shaded
         self.background_gradient = True
         
         # Initialize viewer

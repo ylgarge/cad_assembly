@@ -9,16 +9,44 @@ from typing import Dict, Any, List, Tuple, Optional, Set
 from enum import Enum
 
 try:
-    from OCC.Core import (
-        TopoDS_Shape, TopoDS_Solid, TopoDS_Face, TopoDS_Edge,
-        BRepExtrema_DistShapeShape, BRepAlgoAPI_Common, BRepAlgoAPI_Cut,
-        BRepBuilderAPI_MakeVertex, BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeFace,
-        Bnd_Box, BRepBndLib, BRepMesh_IncrementalMesh,
-        GProp_GProps, BRepGProp,
-        gp_Pnt, Precision, TopAbs_SOLID, TopAbs_FACE, TopAbs_EDGE,
-        BRep_Tool, TopExp_Explorer, TopAbs_ShapeEnum
+    # OCC core shape classes
+    from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid, TopoDS_Face, TopoDS_Edge
+
+    # Boolean & distance operations
+    from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
+    from OCC.Core.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
+
+    # Shape builders
+    from OCC.Core.BRepBuilderAPI import (
+        BRepBuilderAPI_MakeVertex,
+        BRepBuilderAPI_MakeEdge,
+        BRepBuilderAPI_MakeFace
     )
+
+    # Bounding box & meshing
+    from OCC.Core.Bnd import Bnd_Box
+    from OCC.Core.BRepBndLib import brepbndlib
+    from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+
+    # Properties
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop, brepgprop_VolumeProperties, brepgprop_SurfaceProperties
+
+    # Geometry
+    from OCC.Core.gp import gp_Pnt
+
+    # Precision & shape types
+    from OCC.Core.Precision import precision
+    from OCC.Core.TopAbs import TopAbs_SOLID, TopAbs_FACE, TopAbs_EDGE, TopAbs_ShapeEnum
+
+    # Shape exploration & tools
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.TopExp import TopExp_Explorer
+
+    # Topology utilities
     from OCC.Extend.TopologyUtils import TopologyExplorer
+
+
     
 except ImportError as e:
     logging.error(f"PythonOCC collision detection import hatası: {e}")
@@ -68,7 +96,7 @@ class CollisionDetector:
         self.logger = logging.getLogger("CADMontaj.CollisionDetector")
         
         # Toleranslar
-        self.linear_tolerance = Precision.Confusion()  # ~1e-7
+        self.linear_tolerance = precision.Confusion()  # ~1e-7
         self.touch_tolerance = 0.001  # 0.001 mm - dokunma toleransı
         self.overlap_tolerance = AssemblyDefaults.MAX_COLLISION_OVERLAP
         
@@ -280,7 +308,7 @@ class CollisionDetector:
             
             # Bounding box hesapla
             bbox = Bnd_Box()
-            BRepBndLib.Add(shape, bbox)
+            brepbndlib.Add(shape, bbox)
             
             # Cache'e ekle
             self.bounding_box_cache[shape_id] = bbox
@@ -340,8 +368,8 @@ class CollisionDetector:
             props1 = GProp_GProps()
             props2 = GProp_GProps()
             
-            BRepGProp.VolumeProperties(shape1, props1)
-            BRepGProp.VolumeProperties(shape2, props2)
+            brepgprop.VolumeProperties(shape1, props1)
+            brepgprop.VolumeProperties(shape2, props2)
             
             center1 = props1.CentreOfMass()
             center2 = props2.CentreOfMass()
@@ -440,7 +468,7 @@ class CollisionDetector:
         """Shape hacmini hesapla"""
         try:
             props = GProp_GProps()
-            BRepGProp.VolumeProperties(shape, props)
+            brepgprop.VolumeProperties(shape, props)
             return props.Mass()  # Mass = Volume for unit density
         except:
             return 0.0
@@ -449,7 +477,7 @@ class CollisionDetector:
         """Shape yüzey alanını hesapla"""
         try:
             props = GProp_GProps()
-            BRepGProp.SurfaceProperties(shape, props)
+            brepgprop.SurfaceProperties(shape, props)
             return props.Mass()
         except:
             return 0.0
