@@ -6,9 +6,19 @@ PythonOCC tabanlı 3D viewer implementasyonu
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from PyQt5.QtCore import QTimer, pyqtSignal, QObject
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 
+# PythonOCC import'ları güvenli bir şekilde yap
 try:
+    # Backend'i yükle (eğer yüklenmemişse)
+    try:
+        from OCC.Display import backend
+        backend.load_backend('qt-pyqt5')
+    except:
+        # Alternatif yöntem
+        import OCC.Display.backend
+        OCC.Display.backend.load_backend('qt-pyqt5')
+    
     from OCC.Display.qtDisplay import qtViewer3d
     from OCC.Core import (
         gp_Pnt, gp_Dir, gp_Vec, gp_Ax1, gp_Ax2, gp_Ax3, gp_Trsf,
@@ -17,9 +27,10 @@ try:
         V3d_View, V3d_Viewer, Aspect_GradientFillMethod_Horizontal
     )
     from OCC.Extend.TopologyUtils import TopologyExplorer
+    OCC_AVAILABLE = True
 except ImportError as e:
     logging.error(f"PythonOCC import hatası: {e}")
-    raise
+    OCC_AVAILABLE = False
 
 from .geometry_handler import GeometryHandler
 from .transformations import TransformationManager
@@ -52,11 +63,16 @@ class CADViewer(QWidget):
         self.shape_counter = 0
         
         # Managers
-        self.geometry_handler = GeometryHandler(config)
-        self.transform_manager = TransformationManager()
+        try:
+            self.geometry_handler = GeometryHandler(config)
+            self.transform_manager = TransformationManager()
+        except:
+            self.geometry_handler = None
+            self.transform_manager = None
         
         # Settings
-        self.display_mode = AIS_DisplayMode_Shaded
+        if OCC_AVAILABLE:
+            self.display_mode = AIS_DisplayMode_Shaded
         self.background_gradient = True
         
         # Initialize viewer
@@ -65,6 +81,10 @@ class CADViewer(QWidget):
     def _setup_viewer(self):
         """3D viewer'ı kurulum"""
         try:
+            if not OCC_AVAILABLE:
+                self._setup_fallback_viewer()
+                return
+            
             # Layout oluştur
             layout = QVBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
@@ -89,11 +109,45 @@ class CADViewer(QWidget):
             
         except Exception as e:
             self.logger.error(f"3D Viewer kurulum hatası: {e}")
-            raise
+            self._setup_fallback_viewer()
+    
+    def _setup_fallback_viewer(self):
+        """PythonOCC kullanılamadığında fallback viewer"""
+        try:
+            layout = QVBoxLayout()
+            layout.setContentsMargins(0, 0, 0, 0)
+            
+            # Basit placeholder
+            placeholder = QLabel("3D Viewer\n\nPythonOCC mevcut değil veya yüklenemedi.\n\nLütfen PythonOCC kurulumunu kontrol edin.")
+            placeholder.setStyleSheet("""
+                QLabel {
+                    background-color: #f0f0f0;
+                    border: 2px dashed #cccccc;
+                    font-size: 14px;
+                    color: #666666;
+                    text-align: center;
+                    padding: 20px;
+                }
+            """)
+            placeholder.setAlignment(1 | 4)  # Qt.AlignHCenter | Qt.AlignVCenter
+            
+            layout.addWidget(placeholder)
+            self.setLayout(layout)
+            
+            # Timer ile viewer_initialized signal'ini gönder
+            QTimer.singleShot(100, self.viewer_initialized.emit)
+            
+            self.logger.warning("Fallback viewer oluşturuldu - PythonOCC mevcut değil")
+            
+        except Exception as e:
+            self.logger.error(f"Fallback viewer kurulum hatası: {e}")
     
     def _configure_viewer(self):
         """Viewer yapılandırmasını uygula"""
         try:
+            if not OCC_AVAILABLE or not self._display:
+                return
+            
             # Arkaplan ayarı
             if self.background_gradient:
                 self._set_background_gradient()
@@ -107,9 +161,6 @@ class CADViewer(QWidget):
             # Trihedron (koordinat sistemi) göster
             self._display.display_trihedron()
             
-            # Grid ayarları (opsiyonel)
-            # self._display.View.SetGrid(Aspect_GridType_Rectangular, Aspect_GridDrawMode_Lines)
-            
             if self.config:
                 # Config'den ayarları yükle
                 self._apply_config_settings()
@@ -120,6 +171,9 @@ class CADViewer(QWidget):
     def _set_background_gradient(self):
         """Gradient arkaplan ayarla"""
         try:
+            if not OCC_AVAILABLE or not self._display:
+                return
+            
             top_color = ViewerDefaults.BACKGROUND_GRADIENT_TOP
             bottom_color = ViewerDefaults.BACKGROUND_GRADIENT_BOTTOM
             
@@ -137,29 +191,35 @@ class CADViewer(QWidget):
     
     def _apply_config_settings(self):
         """Konfigürasyondan ayarları uygula"""
-        if not self.config:
+        if not self.config or not OCC_AVAILABLE:
             return
             
-        # Arkaplan ayarları
-        bg_gradient = self.config.get("viewer.background_gradient", True)
-        if bg_gradient != self.background_gradient:
-            self.background_gradient = bg_gradient
-            if bg_gradient:
-                self._set_background_gradient()
-            else:
-                self._display.View.SetBackgroundColor(Quantity_NOC_GRAY)
-        
-        # Antialiasing
-        if self.config.get("viewer.antialiasing", True):
-            self._display.View.SetAntialiasingOn()
-        
-        # Shadows
-        if self.config.get("viewer.shadows", True):
-            self._display.View.SetShadingModel(3)  # Phong shading
+        try:
+            # Arkaplan ayarları
+            bg_gradient = self.config.get("viewer.background_gradient", True)
+            if bg_gradient != self.background_gradient:
+                self.background_gradient = bg_gradient
+                if bg_gradient:
+                    self._set_background_gradient()
+                else:
+                    self._display.View.SetBackgroundColor(Quantity_NOC_GRAY)
+            
+            # Antialiasing
+            if self.config.get("viewer.antialiasing", True):
+                self._display.View.SetAntialiasingOn()
+            
+            # Shadows
+            if self.config.get("viewer.shadows", True):
+                self._display.View.SetShadingModel(3)  # Phong shading
+        except Exception as e:
+            self.logger.warning(f"Config ayarları uygulama hatası: {e}")
     
     def _setup_event_handlers(self):
         """Event handler'ları ayarla"""
         try:
+            if not OCC_AVAILABLE or not self._display:
+                return
+            
             # Mouse event'leri için callback'ler
             self._display.register_select_callback(self._on_shape_selected)
             
@@ -182,7 +242,7 @@ class CADViewer(QWidget):
             self._display.FitAll()
     
     def add_shape(self, 
-                  shape, 
+                  shape=None, 
                   color: Optional[Tuple[float, float, float]] = None,
                   transparency: float = 0.0,
                   material: str = "default",
@@ -201,6 +261,24 @@ class CADViewer(QWidget):
             shape_id: Şeklin benzersiz ID'si
         """
         try:
+            if not OCC_AVAILABLE or not self._display or not shape:
+                # Fallback: sadece ID döndür
+                shape_id = f"shape_{self.shape_counter}"
+                self.shape_counter += 1
+                
+                self.shapes[shape_id] = {
+                    "shape": shape,
+                    "ais_shape": None,
+                    "color": color or ViewerDefaults.DEFAULT_PART_COLOR,
+                    "transparency": transparency,
+                    "material": material,
+                    "metadata": metadata or {},
+                    "visible": True
+                }
+                
+                self.logger.debug(f"Shape eklendi (fallback): {shape_id}")
+                return shape_id
+            
             # Benzersiz ID oluştur
             shape_id = f"shape_{self.shape_counter}"
             self.shape_counter += 1
@@ -253,9 +331,10 @@ class CADViewer(QWidget):
                 self.logger.warning(f"Şekil bulunamadı: {shape_id}")
                 return False
             
-            # AIS context'ten kaldır
-            ais_shape = self.shapes[shape_id]["ais_shape"]
-            self._context.Remove(ais_shape, True)
+            if OCC_AVAILABLE and self._context and self.shapes[shape_id]["ais_shape"]:
+                # AIS context'ten kaldır
+                ais_shape = self.shapes[shape_id]["ais_shape"]
+                self._context.Remove(ais_shape, True)
             
             # Dictionary'den kaldır
             del self.shapes[shape_id]
@@ -287,98 +366,36 @@ class CADViewer(QWidget):
             if shape_id not in self.shapes:
                 return False
             
-            ais_shape = self.shapes[shape_id]["ais_shape"]
-            quantity_color = Quantity_Color(color[0], color[1], color[2], 1)
+            if OCC_AVAILABLE and self._context and self.shapes[shape_id]["ais_shape"]:
+                ais_shape = self.shapes[shape_id]["ais_shape"]
+                quantity_color = Quantity_Color(color[0], color[1], color[2], 1)
+                
+                # Rengi güncelle
+                self._context.SetColor(ais_shape, quantity_color, False)
+                self._context.UpdateCurrentViewer()
             
-            # Rengi güncelle
-            self._context.SetColor(ais_shape, quantity_color, False)
             self.shapes[shape_id]["color"] = color
-            
-            self._context.UpdateCurrentViewer()
             return True
             
         except Exception as e:
             self.logger.error(f"Renk değişiklik hatası: {e}")
             return False
     
-    def set_shape_transparency(self, shape_id: str, transparency: float):
-        """Şeklin şeffaflığını değiştir"""
-        try:
-            if shape_id not in self.shapes:
-                return False
-            
-            ais_shape = self.shapes[shape_id]["ais_shape"]
-            
-            if transparency > 0:
-                self._context.SetTransparency(ais_shape, transparency, False)
-            else:
-                self._context.UnsetTransparency(ais_shape, False)
-            
-            self.shapes[shape_id]["transparency"] = transparency
-            self._context.UpdateCurrentViewer()
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Şeffaflık değişiklik hatası: {e}")
-            return False
-    
-    def select_shape(self, shape_id: str):
-        """Şekli seç"""
-        try:
-            if shape_id not in self.shapes:
-                return False
-            
-            ais_shape = self.shapes[shape_id]["ais_shape"]
-            self._context.SetSelected(ais_shape, False)
-            self.selected_shapes.add(shape_id)
-            
-            # Seçim rengini ayarla
-            self.set_shape_color(shape_id, ViewerDefaults.SELECTED_PART_COLOR)
-            
-            self._context.UpdateCurrentViewer()
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Seçim hatası: {e}")
-            return False
-    
-    def deselect_shape(self, shape_id: str):
-        """Şekil seçimini kaldır"""
-        try:
-            if shape_id not in self.shapes or shape_id not in self.selected_shapes:
-                return False
-            
-            ais_shape = self.shapes[shape_id]["ais_shape"]
-            self._context.ClearSelected(False)
-            self.selected_shapes.discard(shape_id)
-            
-            # Orijinal rengini geri yükle
-            original_color = self.shapes[shape_id]["color"]
-            self.set_shape_color(shape_id, original_color)
-            
-            self._context.UpdateCurrentViewer()
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Seçim kaldırma hatası: {e}")
-            return False
-    
-    def clear_selection(self):
-        """Tüm seçimleri kaldır"""
-        for shape_id in list(self.selected_shapes):
-            self.deselect_shape(shape_id)
-    
     def fit_all(self):
         """Tüm nesneleri görüntüde sığdır"""
         try:
-            self._display.FitAll()
-            self.logger.debug("Fit All uygulandı")
+            if OCC_AVAILABLE and self._display:
+                self._display.FitAll()
+                self.logger.debug("Fit All uygulandı")
         except Exception as e:
             self.logger.error(f"Fit All hatası: {e}")
     
     def set_view_direction(self, direction: str):
         """Görüntü yönünü ayarla"""
         try:
+            if not OCC_AVAILABLE or not self._display:
+                return
+            
             view_directions = {
                 "front": (0, 1, 0),
                 "back": (0, -1, 0), 
@@ -402,28 +419,6 @@ class CADViewer(QWidget):
         except Exception as e:
             self.logger.error(f"Görüntü yönü ayarlama hatası: {e}")
     
-    def export_image(self, filename: str, width: int = 800, height: int = 600):
-        """Görüntüyü dosyaya aktar"""
-        try:
-            self._display.View.Dump(filename, width, height)
-            self.logger.info(f"Görüntü aktarıldı: {filename}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Görüntü aktarma hatası: {e}")
-            return False
-    
-    def get_shape_info(self, shape_id: str) -> Optional[Dict[str, Any]]:
-        """Şekil bilgilerini al"""
-        if shape_id in self.shapes:
-            shape_data = self.shapes[shape_id].copy()
-            
-            # Geometrik bilgileri ekle
-            shape = shape_data["shape"]
-            shape_data.update(self.geometry_handler.analyze_shape(shape))
-            
-            return shape_data
-        return None
-    
     def get_all_shapes(self) -> List[str]:
         """Tüm şekil ID'lerini al"""
         return list(self.shapes.keys())
@@ -432,24 +427,85 @@ class CADViewer(QWidget):
         """Seçili şekil ID'lerini al"""
         return list(self.selected_shapes)
     
-    def resizeEvent(self, event):
-        """Widget boyutu değiştiğinde"""
-        super().resizeEvent(event)
-        # Resize işlemini geciktir (performance için)
-        self.resize_timer.start(100)
+    def select_shape(self, shape_id: str):
+        """Şekli seç"""
+        try:
+            if shape_id not in self.shapes:
+                return False
+            
+            if OCC_AVAILABLE and self._context and self.shapes[shape_id]["ais_shape"]:
+                ais_shape = self.shapes[shape_id]["ais_shape"]
+                self._context.SetSelected(ais_shape, False)
+                self._context.UpdateCurrentViewer()
+            
+            self.selected_shapes.add(shape_id)
+            
+            # Seçim rengini ayarla
+            self.set_shape_color(shape_id, ViewerDefaults.SELECTED_PART_COLOR)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Seçim hatası: {e}")
+            return False
+    
+    def set_shape_transparency(self, shape_id: str, transparency: float):
+        """Şeklin şeffaflığını değiştir"""
+        try:
+            if shape_id not in self.shapes:
+                return False
+            
+            if OCC_AVAILABLE and self._context and self.shapes[shape_id]["ais_shape"]:
+                ais_shape = self.shapes[shape_id]["ais_shape"]
+                
+                if transparency > 0:
+                    self._context.SetTransparency(ais_shape, transparency, False)
+                else:
+                    self._context.UnsetTransparency(ais_shape, False)
+                
+                self._context.UpdateCurrentViewer()
+            
+            self.shapes[shape_id]["transparency"] = transparency
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Şeffaflık değişiklik hatası: {e}")
+            return False
     
     def cleanup(self):
         """Temizlik işlemleri"""
         try:
             self.clear_all_shapes()
-            if self._context:
+            if OCC_AVAILABLE and self._context:
                 self._context.RemoveAll(True)
             self.logger.info("Viewer temizlendi")
         except Exception as e:
             self.logger.error(f"Viewer temizlik hatası: {e}")
-            
+    
+    def resizeEvent(self, event):
+        """Widget boyutu değiştiğinde"""
+        super().resizeEvent(event)
+        # Resize işlemini geciktir (performance için)
+        if hasattr(self, 'resize_timer'):
+            self.resize_timer.start(100)
+    
     def showEvent(self, event):
         """Widget gösterildiğinde"""
         super().showEvent(event)
-        if self._display:
+        if OCC_AVAILABLE and self._display:
             self._display.FitAll()
+    
+    def get_shape_info(self, shape_id: str) -> Optional[Dict[str, Any]]:
+        """Şekil bilgilerini al"""
+        if shape_id in self.shapes:
+            shape_data = self.shapes[shape_id].copy()
+            
+            # Geometrik bilgileri ekle
+            if self.geometry_handler and shape_data["shape"]:
+                try:
+                    shape_data.update(self.geometry_handler.analyze_shape(shape_data["shape"]))
+                except:
+                    pass
+            
+            return shape_data
+        return None

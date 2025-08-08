@@ -7,7 +7,8 @@ import sys
 import os
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtCore import Qt
-
+from OCC.Display import backend
+backend.load_backend('pyqt5')
 # Proje modüllerini import et
 try:
     from gui.main_window import MainWindow
