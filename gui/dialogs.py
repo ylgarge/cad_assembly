@@ -13,9 +13,9 @@ from PyQt5.QtWidgets import (
     QSlider, QDialogButtonBox, QFileDialog, QMessageBox,
     QTreeWidget, QTreeWidgetItem, QSplitter, QFrame,
     QScrollArea, QWidget, QProgressDialog, QListWidget,
-    QProgressBar  # ✅ DOĞRU: QtWidgets'tan import
+    QProgressBar  
 )
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread, QTimer  # ❌ QProgressBar burada DEĞİL
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot, QThread, QTimer  
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 
 from utils import Config, APP_NAME, APP_VERSION, GUIDefaults

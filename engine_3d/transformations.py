@@ -10,24 +10,29 @@ from typing import Tuple, List, Optional, Dict, Any
 from enum import Enum
 
 try:
-    from OCC.Core import (
-        # Temel geometrik sınıflar
-        gp_Pnt, gp_Vec, gp_Dir, gp_Ax1, gp_Ax2, gp_Ax3, gp_Quaternion,
-        gp_Trsf, gp_GTrsf, gp_Mat, 
-        
-        # Dönüşüm tipleri
-        gp_Translation, gp_Rotation, gp_Mirror, gp_Scale,
-        
-        # Shape dönüşümleri
-        TopoDS_Shape, BRepBuilderAPI_Transform, BRepBuilderAPI_GTransform,
-        
-        # Matematik fonksiyonları
-        math as occ_math,
-        
-        # Precision
-        Precision
+    # Temel geometrik sınıflar
+    from OCC.Core.gp import (
+        gp_Pnt, gp_Vec, gp_Dir, gp_Ax1, gp_Ax2, gp_Ax3,
+        gp_Quaternion, gp_Trsf, gp_GTrsf, gp_Mat
     )
-    
+
+    # Dönüşüm tipleri
+    from OCC.Core.gp import (
+        gp_Translation, gp_Rotation, gp_Mirror, gp_Scale
+    )
+
+    # Shape dönüşümleri
+    from OCC.Core.TopoDS import TopoDS_Shape
+    from OCC.Core.BRepBuilderAPI import (
+        BRepBuilderAPI_Transform, BRepBuilderAPI_GTransform
+    )
+
+    # Matematik fonksiyonları
+    from OCC.Core import math as occ_math
+
+    # Precision
+    from OCC.Core.Precision import precision
+
 except ImportError as e:
     logging.error(f"PythonOCC dönüşüm import hatası: {e}")
     raise
@@ -57,8 +62,8 @@ class TransformationManager:
         self.transformation_history = []
         
         # Precision değerleri
-        self.linear_precision = Precision.Confusion()
-        self.angular_precision = Precision.Angular()
+        self.linear_precision = precision.Confusion()
+        self.angular_precision = precision.Angular()
         
     def create_translation(self, 
                          vector: Tuple[float, float, float]) -> gp_Trsf:

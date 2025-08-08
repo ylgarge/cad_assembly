@@ -9,23 +9,26 @@ from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 
 try:
+    # Dosya okuma yardımcıları
     from OCC.Extend.DataExchange import read_step_file, read_iges_file
-    from OCC.Core import (
-        # STEP okuma
-        STEPControl_Reader, IFSelect_ReturnStatus,
-        
-        # Shape kontrolleri
-        TopoDS_Shape, TopoDS_Compound,
-        
-        # Healing (shape onarımı)
-        ShapeFix_Shape,
-        
-        # Units
-        Interface_Static,
-        
-        # Topology
-        BRep_Builder, TopoDS_Builder
-    )
+
+    # STEP okuma
+    from OCC.Core.STEPControl import STEPControl_Reader
+    from OCC.Core.IFSelect import IFSelect_ReturnStatus
+
+    # Shape tipleri
+    from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Compound, TopoDS_Builder
+
+    # Healing (onarım)
+    from OCC.Core.ShapeFix import ShapeFix_Shape
+
+    # Birimler / global parametreler
+    from OCC.Core.Interface import Interface_Static
+
+    # Topoloji inşası
+    from OCC.Core.BRep import BRep_Builder
+
+    # Topoloji gezgini
     from OCC.Extend.TopologyUtils import TopologyExplorer
     
 except ImportError as e:

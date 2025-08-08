@@ -6,7 +6,7 @@ PythonOCC Core 7.9.0 ve PyQt5 kullanarak STEP dosyalarının montajı
 import sys
 import os
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtCore import Qt
+from PyQt5.Qt import Qt
 from OCC.Display import backend
 backend.load_backend('pyqt5')
 # Proje modüllerini import et

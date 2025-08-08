@@ -9,41 +9,53 @@ from typing import Dict, List, Tuple, Any, Optional
 from collections import defaultdict
 
 try:
-    from OCC.Core import (
-        # Temel geometrik sınıflar
-        gp_Pnt, gp_Vec, gp_Dir, gp_Ax1, gp_Ax2, gp_Ax3, gp_Pln, gp_Lin,
-        gp_Circ, gp_Elips, gp_Hypr, gp_Parab,
-        
-        # Shape sınıfları  
-        TopoDS_Shape, TopoDS_Face, TopoDS_Edge, TopoDS_Vertex, TopoDS_Solid,
-        TopoDS_Compound, TopoDS_Shell, TopoDS_Wire,
-        
-        # Geometrik analizler
-        BRep_Tool, BRepGProp_Face, BRepGProp_Edge,
-        GProp_GProps, BRepGProp,
-        
-        # Yüzey analizleri
-        BRepAdaptor_Surface, BRepAdaptor_Curve,
+    # Temel geometrik sınıflar
+    from OCC.Core.gp import (
+        gp_Pnt, gp_Vec, gp_Dir, gp_Ax1, gp_Ax2, gp_Ax3,
+        gp_Pln, gp_Lin, gp_Circ, gp_Elips, gp_Hypr, gp_Parab
+    )
+
+    # Shape sınıfları
+    from OCC.Core.TopoDS import (
+        TopoDS_Shape, TopoDS_Face, TopoDS_Edge,
+        TopoDS_Vertex, TopoDS_Solid, TopoDS_Compound,
+        TopoDS_Shell, TopoDS_Wire
+    )
+
+    # Geometrik analizler
+    from OCC.Core.BRep import BRep_Tool
+    from OCC.Core.BRepGProp import brepgprop, BRepGProp_Face, BRepGProp_Edge
+    from OCC.Core.GProp import GProp_GProps
+
+    # Yüzey analizleri
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
+    from OCC.Core.GeomAbs import (
         GeomAbs_SurfaceType, GeomAbs_CurveType,
-        GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Sphere, GeomAbs_Cone,
-        GeomAbs_Torus, GeomAbs_BezierSurface, GeomAbs_BSplineSurface,
-        GeomAbs_Line, GeomAbs_Circle, GeomAbs_BSplineCurve,
-        
-        # Bounding box
-        Bnd_Box, BRepBndLib,
-        
-        # Mesafe hesaplamaları
-        BRepExtrema_DistShapeShape,
-        
-        # Toleranslar
-        Precision,
-        
-        # Topology explorer
+        GeomAbs_Plane, GeomAbs_Cylinder, GeomAbs_Sphere,
+        GeomAbs_Cone, GeomAbs_Torus,
+        GeomAbs_BezierSurface, GeomAbs_BSplineSurface,
+        GeomAbs_Line, GeomAbs_Circle, GeomAbs_BSplineCurve
+    )
+
+    # Bounding box
+    from OCC.Core.Bnd import Bnd_Box
+    from OCC.Core.BRepBndLib import brepbndlib
+
+    # Mesafe hesaplamaları
+    from OCC.Core.BRepExtrema import BRepExtrema_DistShapeShape
+
+    # Toleranslar
+    from OCC.Core.Precision import precision
+
+    # Topology explorer
+    from OCC.Core.TopAbs import (
         TopAbs_FACE, TopAbs_EDGE, TopAbs_VERTEX, TopAbs_SOLID, TopAbs_WIRE
     )
+
+    # Extend utilities
     from OCC.Extend.TopologyUtils import TopologyExplorer
     from OCC.Extend.ShapeFactory import make_box, make_cylinder, make_sphere
-    
+
 except ImportError as e:
     logging.error(f"PythonOCC geometri import hatası: {e}")
     raise
@@ -61,8 +73,8 @@ class GeometryHandler:
         self._properties_cache = {}
         
         # Tolerans değerleri
-        self.linear_tolerance = Precision.Confusion()  # ~1e-7
-        self.angular_tolerance = Precision.Angular()   # ~1e-12
+        self.linear_tolerance = precision.Confusion()  # ~1e-7
+        self.angular_tolerance = precision.Angular()   # ~1e-12
         
         if config:
             self.linear_tolerance = config.get("assembly.tolerance", 0.01)
@@ -146,7 +158,7 @@ class GeometryHandler:
             
             if self._has_volume(shape):
                 # Hacim özellikleri
-                BRepGProp.VolumeProperties(shape, props)
+                brepgprop.VolumeProperties(shape, props)
                 properties.update({
                     "volume": props.Mass(),
                     "center_of_mass": self._gp_pnt_to_tuple(props.CentreOfMass()),
@@ -155,14 +167,14 @@ class GeometryHandler:
             
             if self._has_surface(shape):
                 # Yüzey özellikleri
-                BRepGProp.SurfaceProperties(shape, props)
+                brepgprop.SurfaceProperties(shape, props)
                 properties.update({
                     "surface_area": props.Mass(),
                     "surface_center": self._gp_pnt_to_tuple(props.CentreOfMass())
                 })
             
             # Linear properties (kenar uzunlukları)
-            BRepGProp.LinearProperties(shape, props)
+            brepgprop.LinearProperties(shape, props)
             properties.update({
                 "linear_length": props.Mass(),
                 "linear_center": self._gp_pnt_to_tuple(props.CentreOfMass())
@@ -201,7 +213,7 @@ class GeometryHandler:
         """Bounding box hesapla"""
         try:
             bbox = Bnd_Box()
-            BRepBndLib.Add(shape, bbox)
+            brepbndlib.Add(shape, bbox)
             
             if not bbox.IsVoid():
                 xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
@@ -260,7 +272,7 @@ class GeometryHandler:
             
             # Yüzey alanı
             props = GProp_GProps()
-            BRepGProp.SurfaceProperties(face, props)
+            brepgprop.SurfaceProperties(face, props)
             surface_info["area"] = props.Mass()
             surface_info["center"] = self._gp_pnt_to_tuple(props.CentreOfMass())
             
@@ -364,7 +376,7 @@ class GeometryHandler:
             
             # Kenar uzunluğu
             props = GProp_GProps()
-            BRepGProp.LinearProperties(edge, props)
+            brepgprop.LinearProperties(edge, props)
             edge_info["length"] = props.Mass()
             
             # İlk ve son noktalar

@@ -9,10 +9,18 @@ from typing import Dict, Any, List, Tuple, Optional
 from enum import Enum
 
 try:
-    from OCC.Core import (
-        TopoDS_Shape, gp_Trsf, gp_Pnt, gp_Dir, gp_Vec, gp_Ax1, gp_Ax3,
-        BRepBuilderAPI_Transform, GProp_GProps, BRepGProp
-    )
+    # Shape tipi
+    from OCC.Core.TopoDS import TopoDS_Shape
+
+    # Temel geometrik sınıflar
+    from OCC.Core.gp import gp_Trsf, gp_Pnt, gp_Dir, gp_Vec, gp_Ax1, gp_Ax3
+
+    # Shape dönüşümleri
+    from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+
+    # Geometri özellikleri (kütle/moment)
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop
     
 except ImportError as e:
     logging.error(f"PythonOCC alignment tools import hatası: {e}")
@@ -198,7 +206,7 @@ class AlignmentTools:
         """Shape'in merkez noktasını al"""
         try:
             props = GProp_GProps()
-            BRepGProp.VolumeProperties(shape, props)
+            brepgprop.VolumeProperties(shape, props)
             center = props.CentreOfMass()
             return (center.X(), center.Y(), center.Z())
         except:

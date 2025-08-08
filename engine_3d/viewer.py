@@ -8,26 +8,35 @@ from typing import List, Dict, Any, Optional, Tuple
 from PyQt5.QtCore import QTimer, pyqtSignal, QObject
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 
-# PythonOCC import'ları güvenli bir şekilde yap
+
 try:
     # Backend'i yükle (eğer yüklenmemişse)
     try:
         from OCC.Display import backend
-        backend.load_backend('qt-pyqt5')
-    except:
-        # Alternatif yöntem
+        backend.load_backend('pyqt5')
+    except ImportError:
         import OCC.Display.backend
-        OCC.Display.backend.load_backend('qt-pyqt5')
-    
+        OCC.Display.backend.load_backend('pyqt5')
+
+    # 3D görüntüleyici
     from OCC.Display.qtDisplay import qtViewer3d
-    from OCC.Core import (
-        gp_Pnt, gp_Dir, gp_Vec, gp_Ax1, gp_Ax2, gp_Ax3, gp_Trsf,
-        Quantity_Color, Quantity_NOC_WHITE, Quantity_NOC_GRAY,
-        AIS_InteractiveContext, AIS_Shape, AIS_DisplayMode_Shaded,
-        V3d_View, V3d_Viewer, Aspect_GradientFillMethod_Horizontal
-    )
+
+    # Temel geometrik sınıflar
+    from OCC.Core.gp import gp_Pnt, gp_Dir, gp_Vec, gp_Ax1, gp_Ax2, gp_Ax3, gp_Trsf
+
+    # Renkler
+    from OCC.Core.Quantity import Quantity_Color, Quantity_NOC_WHITE, Quantity_NOC_GRAY
+
+    # 3D Görselleştirme bileşenleri
+    from OCC.Core.AIS import AIS_InteractiveContext, AIS_Shape, AIS_DisplayMode_Shaded
+    from OCC.Core.V3d import V3d_View, V3d_Viewer
+    from OCC.Core.Aspect import Aspect_GradientFillMethod_Horizontal
+
+    # Topoloji gezgini
     from OCC.Extend.TopologyUtils import TopologyExplorer
     OCC_AVAILABLE = True
+
+
 except ImportError as e:
     logging.error(f"PythonOCC import hatası: {e}")
     OCC_AVAILABLE = False

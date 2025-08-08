@@ -9,13 +9,25 @@ from typing import Dict, Any, List, Tuple, Optional, Set
 from enum import Enum
 
 try:
-    from OCC.Core import (
-        TopoDS_Shape, TopoDS_Compound, TopoDS_Builder,
-        BRep_Builder, BRepBuilderAPI_Transform,
-        gp_Trsf, gp_Vec, gp_Pnt, gp_Dir, gp_Ax1,
-        GProp_GProps, BRepGProp
-    )
+    # Shape tipleri
+    from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Compound, TopoDS_Builder
+
+    # Topoloji inşası
+    from OCC.Core.BRep import BRep_Builder
+
+    # Shape dönüşümleri
+    from OCC.Core.BRepBuilderAPI import BRepBuilderAPI_Transform
+
+    # Temel geometrik sınıflar
+    from OCC.Core.gp import gp_Trsf, gp_Vec, gp_Pnt, gp_Dir, gp_Ax1
+
+    # Geometri özellikleri
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop
+
+    # Topoloji gezgini
     from OCC.Extend.TopologyUtils import TopologyExplorer
+
     
 except ImportError as e:
     logging.error(f"PythonOCC montaj import hatası: {e}")

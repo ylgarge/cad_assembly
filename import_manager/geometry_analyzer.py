@@ -9,16 +9,35 @@ from typing import Dict, Any, List, Tuple, Optional
 from pathlib import Path
 
 try:
-    from OCC.Core import (
-        TopoDS_Shape, 
-        GProp_GProps, BRepGProp,
-        Bnd_Box, BRepBndLib,
-        BRepAdaptor_Surface, BRepAdaptor_Curve,
-        GeomAbs_SurfaceType, GeomAbs_CurveType,
-        BRep_Tool,
-        TopAbs_SOLID, TopAbs_SHELL, TopAbs_FACE, TopAbs_WIRE, TopAbs_EDGE, TopAbs_VERTEX
+    # Temel shape tipi
+    from OCC.Core.TopoDS import TopoDS_Shape
+
+    # Geometri özellikleri (kütle özellikleri vs.)
+    from OCC.Core.GProp import GProp_GProps
+    from OCC.Core.BRepGProp import brepgprop
+
+    # Bounding box
+    from OCC.Core.Bnd import Bnd_Box
+    from OCC.Core.BRepBndLib import brepbndlib
+
+    # Adaptörler (yüzey/çizgi)
+    from OCC.Core.BRepAdaptor import BRepAdaptor_Surface, BRepAdaptor_Curve
+
+    # Geometri tipleri
+    from OCC.Core.GeomAbs import GeomAbs_SurfaceType, GeomAbs_CurveType
+
+    # BRep yardımcıları
+    from OCC.Core.BRep import BRep_Tool
+
+    # Topoloji tip sabitleri
+    from OCC.Core.TopAbs import (
+        TopAbs_SOLID, TopAbs_SHELL, TopAbs_FACE,
+        TopAbs_WIRE, TopAbs_EDGE, TopAbs_VERTEX
     )
+
+    # Topoloji gezgini
     from OCC.Extend.TopologyUtils import TopologyExplorer
+
     
 except ImportError as e:
     logging.error(f"PythonOCC geometri analiz import hatası: {e}")
@@ -120,7 +139,7 @@ class GeometryAnalyzer:
             # Hacim özellikleri
             if self._has_volume(shape):
                 volume_props = GProp_GProps()
-                BRepGProp.VolumeProperties(shape, volume_props)
+                brepgprop.VolumeProperties(shape, volume_props)
                 
                 properties["volume"] = {
                     "value": volume_props.Mass(),
@@ -130,7 +149,7 @@ class GeometryAnalyzer:
             
             # Yüzey özellikleri
             surface_props = GProp_GProps()
-            BRepGProp.SurfaceProperties(shape, surface_props)
+            brepgprop.SurfaceProperties(shape, surface_props)
             
             properties["surface"] = {
                 "area": surface_props.Mass(),
@@ -139,7 +158,7 @@ class GeometryAnalyzer:
             
             # Bounding box detayları
             bbox = Bnd_Box()
-            BRepBndLib.Add(shape, bbox)
+            brepbndlib.Add(shape, bbox)
             
             if not bbox.IsVoid():
                 xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
@@ -284,7 +303,7 @@ class GeometryAnalyzer:
                     
                     # Yüzey alanı
                     props = GProp_GProps()
-                    BRepGProp.SurfaceProperties(face, props)
+                    brepgprop.SurfaceProperties(face, props)
                     area = props.Mass()
                     
                     surface_detail = {
