@@ -2,7 +2,7 @@
     "gui": {
         "window_width": 1200,
         "window_height": 800,
-        "window_maximized": false,
+        "window_maximized": true,
         "theme": "light",
         "language": "tr"
     },
@@ -70,7 +70,8 @@
     },
     "files": {
         "recent_files": [
-            "C:/Users/numan/Desktop/KR52_YLGSOFT.STEP"
+            "C:/Users/numan/Desktop/KR52_YLGSOFT.STEP",
+            "C:/Users/numan/Desktop/target/cadveri/KL_1_1.stp"
         ],
         "max_recent_files": 10,
         "auto_backup": true,

@@ -88,18 +88,22 @@ class CADViewer(QWidget):
         self._setup_viewer()
         
     def _setup_viewer(self):
-        """3D viewer'ı kurulum"""
+        """3D viewer'ı kurulum - Gelişmiş versiyon"""
         try:
-            if not OCC_AVAILABLE:
-                self._setup_fallback_viewer()
-                return
-            
             # Layout oluştur
             layout = QVBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             
             # qtViewer3d widget'ı oluştur
             self._viewer_3d = qtViewer3d(self)
+            
+            # ÖNEMLI: Widget boyutunu ayarla
+            self._viewer_3d.setMinimumSize(400, 300)
+            self._viewer_3d.setSizePolicy(
+                self._viewer_3d.sizePolicy().Expanding, 
+                self._viewer_3d.sizePolicy().Expanding
+            )
+            
             layout.addWidget(self._viewer_3d)
             self.setLayout(layout)
             
@@ -107,8 +111,12 @@ class CADViewer(QWidget):
             self._display = self._viewer_3d._display
             self._context = self._display.Context
             
+            # KRITIK: Widget'ın tamamen yüklenmesini bekle
+            self._viewer_3d.show()
+            self._viewer_3d.repaint()
+            
             # Viewer ayarlarını uygula
-            self._configure_viewer()
+            self._configure_viewer_advanced()
             
             # Event handler'ları bağla
             self._setup_event_handlers()
@@ -118,8 +126,125 @@ class CADViewer(QWidget):
             
         except Exception as e:
             self.logger.error(f"3D Viewer kurulum hatası: {e}")
-            self._setup_fallback_viewer()
-    
+            raise
+
+    def _configure_viewer_advanced(self):
+        """Gelişmiş viewer konfigürasyonu"""
+        try:
+            view = self._display.View
+            
+            # Temel ayarlar
+            view.SetLightOn()
+            
+            # Arkaplan
+            if self.background_gradient:
+                self._set_background_gradient()
+            else:
+                view.SetBackgroundColor(Quantity_NOC_WHITE)  # Beyaz arkaplan test için
+            
+            # KRITIK: Kamera ve projeksiyon ayarları
+            self._setup_camera_and_projection()
+            
+            # Display kalitesi
+            self._setup_display_quality()
+            
+            # İlk fit all
+            self._display.FitAll()
+            
+            self.logger.info("Viewer gelişmiş konfigürasyon ile hazır")
+            
+        except Exception as e:
+            self.logger.warning(f"Gelişmiş viewer konfigürasyon hatası: {e}")
+
+    def _setup_camera_and_projection(self):
+        """Kamera ve projeksiyon ayarlarını yap"""
+        try:
+            view = self._display.View
+            
+            # Projeksiyon tipi
+            view.SetProjection(0)  # 0 = Perspective, 1 = Orthographic
+            
+            # Kamera pozisyonu - İZOMETRİK görünüm
+            view.SetProj(1, 1, 1)  # X, Y, Z yönleri (izometrik)
+            
+            # Up vektörü
+            view.SetUp(0, 0, 1)  # Z yukarı
+            
+            # Görüş alanı
+            try:
+                view.SetScale(1.0)
+            except:
+                pass
+            
+            # Depth range
+            try:
+                view.SetZClippingDepth(1000.0)  # Uzak kesme mesafesi
+                view.SetZNear(0.1)  # Yakın kesme mesafesi
+                view.SetZFar(10000.0)  # Uzak kesme mesafesi
+            except Exception as e:
+                self.logger.debug(f"Z-depth ayarları uygulanamadı: {e}")
+            
+            self.logger.debug("Kamera ve projeksiyon ayarlandı")
+            
+        except Exception as e:
+            self.logger.warning(f"Kamera ayarlama hatası: {e}")
+
+    def _setup_display_quality(self):
+        """Display kalitesi ayarları"""
+        try:
+            view = self._display.View
+            
+            # Trihedron ekle
+            try:
+                self._add_coordinate_system()
+            except:
+                pass
+            
+            # Grid (opsiyonel)
+            try:
+                self._add_grid()
+            except:
+                pass
+            
+            self.logger.debug("Display kalitesi ayarlandı")
+            
+        except Exception as e:
+            self.logger.debug(f"Display kalite ayarları hatası: {e}")
+
+    def _add_coordinate_system(self):
+        """Koordinat sistemi ekle"""
+        try:
+            from OCC.Core import AIS_Trihedron, Geom_Axis2Placement
+            from OCC.Core import gp_Ax2, gp_Pnt, gp_Dir
+            
+            # Koordinat sistemi
+            axis = gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1))
+            trihedron_geom = Geom_Axis2Placement(axis)
+            trihedron = AIS_Trihedron(trihedron_geom)
+            trihedron.SetSize(50.0)
+            
+            # Context'e ekle
+            self._context.Display(trihedron, False)
+            
+            self.logger.debug("Koordinat sistemi eklendi")
+            
+        except Exception as e:
+            self.logger.debug(f"Koordinat sistemi hatası: {e}")
+
+    def _add_grid(self):
+        """Grid ekle (opsiyonel)"""
+        try:
+            from OCC.Core import Aspect_GridType_Rectangular, Aspect_GridDrawMode_Lines
+            
+            # Grid ayarları
+            self._display.View.SetGrid(Aspect_GridType_Rectangular, Aspect_GridDrawMode_Lines)
+            self._display.View.GridOn()
+            
+            self.logger.debug("Grid eklendi")
+            
+        except Exception as e:
+            self.logger.debug(f"Grid hatası: {e}")        
+             
     def _setup_fallback_viewer(self):
         """PythonOCC kullanılamadığında fallback viewer"""
         try:
@@ -152,31 +277,82 @@ class CADViewer(QWidget):
             self.logger.error(f"Fallback viewer kurulum hatası: {e}")
     
     def _configure_viewer(self):
-        """Viewer yapılandırmasını uygula"""
+        """Viewer yapılandırmasını uygula - Sadece çalışan API'ler"""
         try:
-            if not OCC_AVAILABLE or not self._display:
-                return
-            
-            # Arkaplan ayarı
-            if self.background_gradient:
-                self._set_background_gradient()
-            else:
-                self._display.View.SetBackgroundColor(Quantity_NOC_GRAY)
-            
-            # Lighting ve görsel ayarlar
+            # Temel görsel ayarlar
             view = self._display.View
-            view.SetLightOn()
             
-            # Trihedron (koordinat sistemi) göster
-            self._display.display_trihedron()
+            # Lighting (genelde çalışır)
+            try:
+                view.SetLightOn()
+                self.logger.debug("Lighting açıldı")
+            except Exception as e:
+                self.logger.debug(f"Lighting ayarlanamadı: {e}")
             
+            # Arkaplan rengi
+            try:
+                if self.background_gradient:
+                    self._set_background_gradient()
+                else:
+                    view.SetBackgroundColor(Quantity_NOC_GRAY)
+                self.logger.debug("Arkaplan ayarlandı")
+            except Exception as e:
+                self.logger.debug(f"Arkaplan ayarlanamadı: {e}")
+            
+            # Basit trihedron ekleme
+            self._add_simple_trihedron()
+            
+            # Config ayarlarını güvenli şekilde uygula
             if self.config:
-                # Config'den ayarları yükle
-                self._apply_config_settings()
+                self._apply_config_settings_safe()
                 
+            self.logger.info("Viewer temel konfigürasyon ile hazır")
+            
         except Exception as e:
-            self.logger.warning(f"Viewer konfigürasyon uyarısı: {e}")
-    
+            self.logger.warning(f"Viewer konfigürasyon hatası: {e}")
+
+    def _apply_config_settings_safe(self):
+        """Konfigürasyondan ayarları güvenli şekilde uygula"""
+        try:
+            # Sadece arkaplan ayarları (güvenli)
+            bg_gradient = self.config.get("viewer.background_gradient", True)
+            if bg_gradient != self.background_gradient:
+                self.background_gradient = bg_gradient
+                try:
+                    if bg_gradient:
+                        self._set_background_gradient()
+                    else:
+                        self._display.View.SetBackgroundColor(Quantity_NOC_GRAY)
+                except Exception as e:
+                    self.logger.debug(f"Arkaplan değiştirilemedi: {e}")
+            
+            # Diğer ayarları şimdilik pas geç
+            self.logger.debug("Config ayarları güvenli modda uygulandı")
+            
+        except Exception as e:
+            self.logger.debug(f"Config ayarları uygulanamadı: {e}")
+
+    def _add_simple_trihedron(self):
+        """Basit koordinat sistemi ekle"""
+        try:
+            from OCC.Core import AIS_Trihedron, Geom_Axis2Placement
+            from OCC.Core import gp_Ax2, gp_Pnt, gp_Dir
+            
+            # Koordinat sistemi oluştur
+            axis = gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1))
+            trihedron_geom = Geom_Axis2Placement(axis)
+            trihedron = AIS_Trihedron(trihedron_geom)
+            
+            # Boyut ayarla
+            trihedron.SetSize(30.0)  # 30 birim boyut
+            
+            # Display
+            self._context.Display(trihedron, True)
+            self.logger.debug("Trihedron eklendi")
+            
+        except Exception as e:
+            self.logger.debug(f"Trihedron eklenemedi: {e}")  
+                    
     def _set_background_gradient(self):
         """Gradient arkaplan ayarla"""
         try:
@@ -197,31 +373,6 @@ class CADViewer(QWidget):
             )
         except Exception as e:
             self.logger.warning(f"Gradient arkaplan ayarlama hatası: {e}")
-    
-    def _apply_config_settings(self):
-        """Konfigürasyondan ayarları uygula"""
-        if not self.config or not OCC_AVAILABLE:
-            return
-            
-        try:
-            # Arkaplan ayarları
-            bg_gradient = self.config.get("viewer.background_gradient", True)
-            if bg_gradient != self.background_gradient:
-                self.background_gradient = bg_gradient
-                if bg_gradient:
-                    self._set_background_gradient()
-                else:
-                    self._display.View.SetBackgroundColor(Quantity_NOC_GRAY)
-            
-            # Antialiasing
-            if self.config.get("viewer.antialiasing", True):
-                self._display.View.SetAntialiasingOn()
-            
-            # Shadows
-            if self.config.get("viewer.shadows", True):
-                self._display.View.SetShadingModel(3)  # Phong shading
-        except Exception as e:
-            self.logger.warning(f"Config ayarları uygulama hatası: {e}")
     
     def _setup_event_handlers(self):
         """Event handler'ları ayarla"""
@@ -251,66 +402,55 @@ class CADViewer(QWidget):
             self._display.FitAll()
     
     def add_shape(self, 
-                  shape=None, 
-                  color: Optional[Tuple[float, float, float]] = None,
-                  transparency: float = 0.0,
-                  material: str = "default",
-                  metadata: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Sahneye şekil ekle
-        
-        Args:
-            shape: OCC Shape objesi
-            color: RGB renk tuple'ı (0-1 arası)
-            transparency: Şeffaflık (0-1 arası)
-            material: Materyal adı
-            metadata: Ek veri
-            
-        Returns:
-            shape_id: Şeklin benzersiz ID'si
-        """
+                shape, 
+                color: Optional[Tuple[float, float, float]] = None,
+                transparency: float = 0.0,
+                material: str = "default",
+                metadata: Optional[Dict[str, Any]] = None) -> str:
+        """Sahneye şekil ekle - ZORLAMA versiyonu"""
         try:
-            if not OCC_AVAILABLE or not self._display or not shape:
-                # Fallback: sadece ID döndür
-                shape_id = f"shape_{self.shape_counter}"
-                self.shape_counter += 1
-                
-                self.shapes[shape_id] = {
-                    "shape": shape,
-                    "ais_shape": None,
-                    "color": color or ViewerDefaults.DEFAULT_PART_COLOR,
-                    "transparency": transparency,
-                    "material": material,
-                    "metadata": metadata or {},
-                    "visible": True
-                }
-                
-                self.logger.debug(f"Shape eklendi (fallback): {shape_id}")
-                return shape_id
+            self.logger.info(f"=== SHAPE DISPLAY ZORLAMA ===")
             
-            # Benzersiz ID oluştur
+            if not shape or shape.IsNull():
+                self.logger.error("Shape null!")
+                return None
+            
+            # Shape ID
             shape_id = f"shape_{self.shape_counter}"
             self.shape_counter += 1
             
             # AIS_Shape oluştur
             ais_shape = AIS_Shape(shape)
             
-            # Renk ayarı
+            # ZORLAMA: Renk ayarı
             if color is None:
-                color = ViewerDefaults.DEFAULT_PART_COLOR
+                color = (0.7, 0.2, 0.2)  # Koyu kırmızı - görünür olsun
             
             quantity_color = Quantity_Color(color[0], color[1], color[2], 1)
             ais_shape.SetColor(quantity_color)
             
-            # Şeffaflık ayarı
-            if transparency > 0:
-                ais_shape.SetTransparency(transparency)
+            # ZORLAMA: Display mode
+            ais_shape.SetDisplayMode(1)  # Shaded
             
-            # Display mode ayarı
-            ais_shape.SetDisplayMode(self.display_mode)
+            # ZORLAMA: Material
+            try:
+                from OCC.Core import Graphic3d_MaterialAspect, Graphic3d_NameOfMaterial
+                material_aspect = Graphic3d_MaterialAspect(Graphic3d_NameOfMaterial.Graphic3d_NOM_PLASTIC)
+                ais_shape.SetMaterial(material_aspect)
+            except:
+                pass
             
-            # Context'e ekle
-            self._context.Display(ais_shape, False)  # False = update etme
+            # KRITIK: Context'e ZORLAMA ile ekle
+            self._context.Display(ais_shape, True)  # True = Immediate update
+            
+            # ZORLAMA: Fit all
+            self._display.FitAll()
+            
+            # ZORLAMA: Repaint
+            self._display.Repaint()
+            
+            # ZORLAMA: Update viewer
+            self._context.UpdateCurrentViewer()
             
             # Shape'i kaydet
             self.shapes[shape_id] = {
@@ -323,15 +463,19 @@ class CADViewer(QWidget):
                 "visible": True
             }
             
-            # Görüntüyü güncelle
-            self._context.UpdateCurrentViewer()
+            # ZORLAMA: Widget'ı yeniden boyutlandır
+            try:
+                self._viewer_3d.update()
+                self._viewer_3d.repaint()
+            except:
+                pass
             
-            self.logger.debug(f"Şekil eklendi: {shape_id}")
+            self.logger.info(f"Shape ZORLAMA ile eklendi: {shape_id}")
             return shape_id
             
         except Exception as e:
-            self.logger.error(f"Şekil ekleme hatası: {e}")
-            return None
+            self.logger.error(f"Shape display ZORLAMA hatası: {e}")
+            return None   
     
     def remove_shape(self, shape_id: str) -> bool:
         """Şekli sahneden kaldır"""

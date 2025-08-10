@@ -102,6 +102,7 @@ class MainWindow(QMainWindow):
             
             # 3D Viewer oluştur
             self.viewer = create_viewer(self, self.config)
+            self.viewer.setMinimumSize(600, 400)  # Minimum 600x400
             main_splitter.addWidget(self.viewer)
             
             # Sağ panel (properties + tree)
@@ -109,8 +110,9 @@ class MainWindow(QMainWindow):
             main_splitter.addWidget(right_panel)
             
             # Splitter oranları
-            main_splitter.setStretchFactor(0, 4)  # Viewer daha geniş
-            main_splitter.setStretchFactor(1, 1)  # Panel dar
+            main_splitter.setStretchFactor(0, 3)  # Viewer 3 birim
+            main_splitter.setStretchFactor(1, 1)  # Panel 1 birim
+            main_splitter.setSizes([800, 200])    # İlk boyutlar
             
             # Toolbar oluştur
             self.toolbar = MainToolbar(self)
@@ -139,6 +141,7 @@ class MainWindow(QMainWindow):
     def _create_right_panel(self) -> QWidget:
         """Sağ paneli oluştur"""
         panel = QWidget()
+        panel.setMinimumWidth(250)  # Minimum genişlik
         layout = QVBoxLayout(panel)
         
         # Tab widget
@@ -361,6 +364,22 @@ class MainWindow(QMainWindow):
                 self.viewer.shape_deselected.connect(self._on_shape_deselected)
                 self.viewer.viewer_initialized.connect(self._on_viewer_ready)
             
+            # *** TOOLBAR SİNYALLERİNİ BAĞLA ***
+            if self.toolbar:
+                # Dosya işlemleri
+                self.toolbar.file_open_requested.connect(self.open_file)
+                self.toolbar.file_save_requested.connect(self._on_save_requested)
+                
+                # Görünüm işlemleri
+                self.toolbar.view_direction_changed.connect(self.set_view_direction)
+                self.toolbar.display_mode_changed.connect(self._on_display_mode_changed)
+                
+                # Montaj işlemleri
+                self.toolbar.assembly_start_requested.connect(self.start_assembly)
+                self.toolbar.collision_check_requested.connect(self.check_collisions)
+                
+                self.logger.info("Toolbar sinyalleri bağlandı")
+            
             # Model tree
             if hasattr(self, 'model_tree'):
                 self.model_tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
@@ -379,7 +398,47 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             self.logger.error(f"Bağlantı kurulum hatası: {e}")
-    
+
+    # YENİ SLOT FONKSİYONLARI EKLE
+    @pyqtSlot()
+    def _on_save_requested(self):
+        """Kaydet butonu tıklandığında"""
+        self.logger.info("Kaydet işlemi başlatıldı")
+        # TODO: Save implementation
+
+    @pyqtSlot(str)
+    def _on_display_mode_changed(self, mode: str):
+        """Display mode değiştiğinde"""
+        self.logger.info(f"Display mode değiştirildi: {mode}")
+        
+        try:
+            if not self.viewer or not hasattr(self.viewer, '_context'):
+                return
+            
+            # Mode'a göre display mode ayarla
+            display_mode = 1  # Shaded
+            if mode.lower() == "wireframe":
+                display_mode = 0  # Wireframe
+            elif mode.lower() == "hidden line":
+                display_mode = 2  # Hidden line (eğer destekleniyorsa)
+            
+            # Tüm shape'lerin display mode'unu değiştir
+            for shape_id, shape_data in self.current_shapes.items():
+                try:
+                    ais_shape = shape_data.get("ais_shape")
+                    if ais_shape:
+                        self.viewer._context.SetDisplayMode(ais_shape, display_mode, True)
+                except Exception as e:
+                    self.logger.warning(f"Shape {shape_id} display mode hatası: {e}")
+            
+            # Viewer'ı güncelle
+            self.viewer._context.UpdateCurrentViewer()
+            self.logger.info(f"Display mode güncellendi: {mode}")
+            
+        except Exception as e:
+            self.logger.error(f"Display mode değiştirme hatası: {e}")
+            
+         
     def _apply_config(self):
         """Konfigürasyonu uygula"""
         try:
